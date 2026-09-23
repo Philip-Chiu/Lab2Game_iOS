@@ -1,7 +1,7 @@
 name: Build iOS IPA (Unsigned)
 
 on:
-  workflow_dispatch: # 支援手動按鈕觸發
+  workflow_dispatch:
 
 jobs:
   build:
@@ -10,7 +10,7 @@ jobs:
       - name: Checkout Repository with LFS
         uses: actions/checkout@v4
         with:
-          lfs: true # 關鍵：確保雲端有真正下載剛才上傳的 218MB .a 庫檔案
+          lfs: true
 
       - name: Checkout LFS Objects
         run: git lfs pull
@@ -25,11 +25,15 @@ jobs:
             -derivedDataPath build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_BITCODE=NO \
+            DEBUG_INFORMATION_FORMAT=dwarf \
+            GCC_GENERATE_DEBUGGING_SYMBOLS=NO
 
       - name: Package Payload into IPA
         run: |
           mkdir -p Payload
+          # 複製編譯出來的 .app（同時包含 UnityFramework）
           cp -r build/Build/Products/Release-iphoneos/*.app Payload/
           zip -r game.ipa Payload
 
