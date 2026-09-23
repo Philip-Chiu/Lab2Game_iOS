@@ -15,12 +15,17 @@ jobs:
       - name: Checkout LFS Objects
         run: git lfs pull
 
+      - name: Disable Unity Process Symbols Scripts
+        run: |
+          # 停用專案中強制執行符號處理的腳本，避免無簽名編譯時崩潰
+          sed -i '' 's/.*process_symbols.*/echo "Skipped"/g' Unity-iPhone.xcodeproj/project.pbxproj || true
+
       - name: Build Xcode Project without Signing
         run: |
-          xcodebuild build \
+          xcodebuild clean build \
             -project Unity-iPhone.xcodeproj \
             -scheme Unity-iPhone \
-            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
             -configuration Release \
             -derivedDataPath build \
             CODE_SIGN_IDENTITY="" \
@@ -28,13 +33,15 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             ENABLE_BITCODE=NO \
             DEBUG_INFORMATION_FORMAT=dwarf \
-            GCC_GENERATE_DEBUGGING_SYMBOLS=NO
+            GCC_GENERATE_DEBUGGING_SYMBOLS=NO \
+            ONLY_ACTIVE_ARCH=NO
 
       - name: Package Payload into IPA
         run: |
           mkdir -p Payload
-          # 複製編譯出來的 .app（同時包含 UnityFramework）
-          cp -r build/Build/Products/Release-iphoneos/*.app Payload/
+          # 尋找編譯出的 .app 檔案並打包
+          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" -maxdepth 1)
+          cp -r "$APP_PATH" Payload/
           zip -r game.ipa Payload
 
       - name: Upload IPA Artifact
